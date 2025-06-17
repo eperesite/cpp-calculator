@@ -1,16 +1,18 @@
 #pragma once
 
+using Number = double;
+
 class Calculator {
 public:
-    void Set(double value);
-    double GetNumber() const;
+    void Set(Number value);
+    Number GetNumber() const;
 
-    void Add(double value);
-    void Sub(double value);
-    void Mul(double value);
-    void Div(double value);
-    void Pow(double value);
+    void Add(Number value);
+    void Sub(Number value);
+    void Mul(Number value);
+    void Div(Number value);
+    void Pow(Number value);
 
 private:
-    double current_value_ = 0;
+    Number current_value_ = 0;
 };

@@ -41,10 +41,12 @@ private:
     Ui::MainWindow *ui;
     Calculator calculator_;
     QString input_number_;
-    double active_number_ = 0;
+    Number active_number_ = 0;
     Operation current_operation_ = Operation::NO_OPERATION;
-    double memory_ = 0;
+    Number memory_ = 0;
     bool memory_set_ = false;
+
+    bool clear_display_on_next_digit_ = false;
 
     void SetText(const QString &text);
     void AddText(const QString &suffix);

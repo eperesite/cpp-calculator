@@ -8,6 +8,8 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
+    clear_display_on_next_digit_ = false;
+
     for (int i = 0; i <= 9; ++i) {
         QString buttonName = QString("btn%1").arg(i);
         QPushButton *button = findChild<QPushButton *>(buttonName);
@@ -47,16 +49,18 @@ void MainWindow::SetText(const QString &text) {
 }
 
 void MainWindow::AddText(const QString &suffix) {
-    if (current_operation_ != Operation::NO_OPERATION && input_number_.isEmpty()) {
-        input_number_ = "0";
-    }
     SetText(input_number_ + suffix);
 }
 
 void MainWindow::onDigitClicked() {
     QPushButton *button = qobject_cast<QPushButton *>(sender());
     if (button) {
-        AddText(button->text());
+        if (clear_display_on_next_digit_ || input_number_ == "0") {
+            SetText(button->text());
+            clear_display_on_next_digit_ = false;
+        } else {
+            AddText(button->text());
+        }
     }
 }
 
@@ -64,25 +68,30 @@ void MainWindow::onOperationClicked() {
     QPushButton *button = qobject_cast<QPushButton *>(sender());
     if (!button) return;
 
-    Operation op = Operation::NO_OPERATION;
-    if (button == ui->btnAdd) op = Operation::ADDITION;
-    else if (button == ui->btnSub) op = Operation::SUBTRACTION;
-    else if (button == ui->btnMul) op = Operation::MULTIPLICATION;
-    else if (button == ui->btnDiv) op = Operation::DIVISION;
-    else if (button == ui->btnPow) op = Operation::POWER;
+    Operation newOp = Operation::NO_OPERATION;
+    if (button == ui->btnAdd) newOp = Operation::ADDITION;
+    else if (button == ui->btnSub) newOp = Operation::SUBTRACTION;
+    else if (button == ui->btnMul) newOp = Operation::MULTIPLICATION;
+    else if (button == ui->btnDiv) newOp = Operation::DIVISION;
+    else if (button == ui->btnPow) newOp = Operation::POWER;
 
-    SetOperation(op);
+    SetOperation(newOp);
 }
 
 void MainWindow::SetOperation(Operation op) {
-    if (current_operation_ == Operation::NO_OPERATION) {
-        calculator_.Set(active_number_);
+    if (current_operation_ != Operation::NO_OPERATION) {
+        if (clear_display_on_next_digit_) {
+            current_operation_ = op;
+            ui->l_formula->setText(QString("%1 %2").arg(calculator_.GetNumber()).arg(OpToString(op)));
+            return;
+        }
     } else {
+        calculator_.Set(active_number_);
     }
 
     current_operation_ = op;
     ui->l_formula->setText(QString("%1 %2").arg(calculator_.GetNumber()).arg(OpToString(op)));
-    input_number_.clear();
+    clear_display_on_next_digit_ = true;
 }
 
 QString MainWindow::OpToString(Operation op) {
@@ -98,43 +107,36 @@ QString MainWindow::OpToString(Operation op) {
 }
 
 void MainWindow::onEqualsClicked() {
-    if (current_operation_ == Operation::NO_OPERATION) return;
+    if (current_operation_ == Operation::NO_OPERATION) {
+        ui->l_formula->setText("");
+        return;
+    }
 
-    QString formula = QString("%1 %2 %3 =").arg(calculator_.GetNumber())
-                          .arg(OpToString(current_operation_))
-                          .arg(active_number_);
-    ui->l_formula->setText(formula);
+    QString formula_display = QString("%1 %2 %3 =").arg(calculator_.GetNumber())
+                                  .arg(OpToString(current_operation_))
+                                  .arg(active_number_);
+    ui->l_formula->setText(formula_display);
 
     switch(current_operation_) {
-    case Operation::ADDITION:
-        calculator_.Add(active_number_);
-        break;
-    case Operation::SUBTRACTION:
-        calculator_.Sub(active_number_);
-        break;
-    case Operation::MULTIPLICATION:
-        calculator_.Mul(active_number_);
-        break;
-    case Operation::DIVISION:
-        calculator_.Div(active_number_);
-        break;
-    case Operation::POWER:
-        calculator_.Pow(active_number_);
-        break;
-    case Operation::NO_OPERATION:
-        break;
+    case Operation::ADDITION: calculator_.Add(active_number_); break;
+    case Operation::SUBTRACTION: calculator_.Sub(active_number_); break;
+    case Operation::MULTIPLICATION: calculator_.Mul(active_number_); break;
+    case Operation::DIVISION: calculator_.Div(active_number_); break;
+    case Operation::POWER: calculator_.Pow(active_number_); break;
+    case Operation::NO_OPERATION: break;
     }
 
     active_number_ = calculator_.GetNumber();
-    ui->l_result->setText(QString::number(active_number_));
-    input_number_.clear();
+    SetText(QString::number(active_number_));
     current_operation_ = Operation::NO_OPERATION;
+    clear_display_on_next_digit_ = true;
 }
 
 void MainWindow::onClearClicked() {
     current_operation_ = Operation::NO_OPERATION;
     ui->l_formula->setText("");
     SetText("0");
+    clear_display_on_next_digit_ = false;
 }
 
 void MainWindow::onSignClicked() {
@@ -166,14 +168,18 @@ void MainWindow::onBackspaceClicked() {
 
 void MainWindow::onMemoryClearClicked() {
     memory_set_ = false;
+    memory_ = 0;
     ui->l_memory->setText("");
 }
 
 void MainWindow::onMemoryRecallClicked() {
     if (memory_set_) {
         active_number_ = memory_;
-        ui->l_result->setText(QString::number(active_number_));
-        input_number_.clear();
+        SetText(QString::number(active_number_));
+        clear_display_on_next_digit_ = false;
+        if (current_operation_ == Operation::NO_OPERATION) {
+            calculator_.Set(active_number_);
+        }
     }
 }
 
@@ -191,10 +197,15 @@ QString MainWindow::NormalizeNumber(const QString &text) {
         return NormalizeNumber("0" + text);
     }
     if (text.startsWith('-') && text.length() > 1) {
-        return "-" + NormalizeNumber(text.mid(1));
+        QString sign = "-";
+        QString numericPart = text.mid(1);
+        if (numericPart.startsWith('0') && numericPart != "0" && !numericPart.startsWith("0.")) {
+            return sign + RemoveTrailingZeroes(numericPart);
+        }
+        return text;
     }
     if (text.startsWith('0') && text != "0" && !text.startsWith("0.")) {
-        return NormalizeNumber(RemoveTrailingZeroes(text));
+        return RemoveTrailingZeroes(text);
     }
     return text;
 }
