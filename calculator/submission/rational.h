@@ -25,6 +25,10 @@ public:
     int GetNumerator() const { return numerator_; }
     int GetDenominator() const { return denominator_; }
 
+    Rational operator+() const {
+        return *this;
+    }
+
     Rational operator-() const {
         return Rational(-numerator_, denominator_);
     }
