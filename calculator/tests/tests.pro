@@ -7,22 +7,30 @@ QT += gui
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 CONFIG += qt warn_on depend_includepath testcase
 
-CONFIG += c++17
+CONFIG += c++20
 
 SUBMISSION_PATH = ../submission
+
+DEFINES += "PRAC_TESTS"
 
 INCLUDEPATH += $$SUBMISSION_PATH
 
 TEMPLATE = app
 
-SOURCES +=  tests.cpp \
-    $$SUBMISSION_PATH/calculator.cpp \
-    $$SUBMISSION_PATH/mainwindow.cpp
-    $$SUBMISSION_PATH/main.cpp
+SOURCES += \
+        tests.cpp \
+        $$SUBMISSION_PATH/mainwindow.cpp \
 
-HEADERS +=  \
-    $$SUBMISSION_PATH/calculator.h \
-    $$SUBMISSION_PATH/mainwindow.h
+HEADERS += \
+        utils.h \
+        calculator_tests.h \
+        $$SUBMISSION_PATH/mainwindow.h \
+        $$SUBMISSION_PATH/calculator.h \
+        $$SUBMISSION_PATH/controller.h \
+        $$SUBMISSION_PATH/enums.h \
+        $$SUBMISSION_PATH/pow.h \
+        $$SUBMISSION_PATH/rational.h
+
 
 FORMS += \
-    $$SUBMISSION_PATH/mainwindow.ui
+        $$SUBMISSION_PATH/mainwindow.ui
